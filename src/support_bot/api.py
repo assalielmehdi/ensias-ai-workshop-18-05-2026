@@ -48,7 +48,7 @@ def workflow_tickets(req: TicketRequest) -> TicketResponse:
     logger.info("POST /workflow/tickets order_id=%s", req.order_id)
     try:
         return run_workflow(req)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("workflow failed")
         return _safe_fallback(str(exc))
 
@@ -60,7 +60,7 @@ def agent_tickets(req: TicketRequest) -> TicketResponse:
     logger.info("POST /agent/tickets order_id=%s", req.order_id)
     try:
         return run_agent(req)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("agent failed")
         return _safe_fallback(str(exc))
 
@@ -69,9 +69,7 @@ def agent_tickets(req: TicketRequest) -> TicketResponse:
 def tickets(req: TicketRequestWithMode) -> TicketResponse:
     """Convenience endpoint: pick workflow or agent via a `mode` field."""
 
-    base = TicketRequest(
-        message=req.message, customer_id=req.customer_id, order_id=req.order_id
-    )
+    base = TicketRequest(message=req.message, customer_id=req.customer_id, order_id=req.order_id)
     if req.mode == "workflow":
         return workflow_tickets(base)
     if req.mode == "agent":

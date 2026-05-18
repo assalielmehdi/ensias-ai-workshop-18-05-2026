@@ -6,13 +6,13 @@ in these types, which is what makes the system easy to reason about.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
 
-class TicketCategory(str, Enum):
+class TicketCategory(StrEnum):
     REFUND_REQUEST = "refund_request"
     DELIVERY_ISSUE = "delivery_issue"
     BILLING_ISSUE = "billing_issue"
@@ -21,7 +21,7 @@ class TicketCategory(str, Enum):
     ESCALATION_REQUIRED = "escalation_required"
 
 
-class Urgency(str, Enum):
+class Urgency(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

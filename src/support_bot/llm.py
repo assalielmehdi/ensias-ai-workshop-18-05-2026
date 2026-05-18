@@ -15,14 +15,32 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any, Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.tools import BaseTool
+from pydantic import Field, SecretStr
 
 from .config import settings
+
+
+def _as_text(content: object) -> str:
+    """Coerce a LangChain message `content` (str | list[...] | None) to str.
+
+    LangChain types `BaseMessage.content` as a union to support multi-modal
+    payloads; for our purposes it's always plain text, so we normalize once
+    here instead of guarding at every call site.
+    """
+
+    if isinstance(content, str):
+        return content
+    if content is None:
+        return ""
+    return str(content)
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +56,10 @@ def _real_chat_model() -> BaseChatModel:
     from langchain_openai import ChatOpenAI
 
     if not settings.llm_api_key:
-        raise RuntimeError(
-            "LLM_API_KEY is empty. Set it in .env or switch LLM_MODE=mock."
-        )
+        raise RuntimeError("LLM_API_KEY is empty. Set it in .env or switch LLM_MODE=mock.")
     return ChatOpenAI(
         model=settings.llm_model,
-        api_key=settings.llm_api_key,
+        api_key=SecretStr(settings.llm_api_key),
         base_url=settings.llm_base_url,
         temperature=settings.llm_temperature,
     )
@@ -67,7 +83,7 @@ class MockChatModel(BaseChatModel):
     workshop runnable offline, not to be smart.
     """
 
-    bound_tools: list[BaseTool] = []
+    bound_tools: list[BaseTool] = Field(default_factory=list)
 
     @property
     def _llm_type(self) -> str:
@@ -82,25 +98,25 @@ class MockChatModel(BaseChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         system = next((m for m in messages if isinstance(m, SystemMessage)), None)
-        last_human = next(
-            (m for m in reversed(messages) if isinstance(m, HumanMessage)), None
-        )
-        system_text = (system.content if system else "") or ""
-        human_text = (last_human.content if last_human else "") or ""
+        last_human = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
+        system_text = _as_text(system.content) if system else ""
+        human_text = _as_text(last_human.content) if last_human else ""
 
         reply = self._route(system_text, human_text, messages)
         return ChatResult(generations=[ChatGeneration(message=reply)])
 
-    def bind_tools(self, tools: Iterable[BaseTool], **kwargs: Any) -> "MockChatModel":  # type: ignore[override]
+    # LangChain's BaseChatModel.bind_tools uses a broader Sequence/Callable
+    # union that's painful to mirror exactly; the override works at runtime.
+    def bind_tools(  # type: ignore[override]  # ty: ignore[invalid-method-override]
+        self, tools: Iterable[BaseTool], **kwargs: Any
+    ) -> BaseChatModel:
         new = MockChatModel()
         new.bound_tools = list(tools)
         return new
 
     # --- routing -----------------------------------------------------------
 
-    def _route(
-        self, system: str, human: str, history: list[BaseMessage]
-    ) -> AIMessage:
+    def _route(self, system: str, human: str, history: list[BaseMessage]) -> AIMessage:
         s = system.lower()
         if "classifier" in s:
             return AIMessage(content=json.dumps(_mock_classify(human)))
@@ -127,8 +143,10 @@ class MockChatModel(BaseChatModel):
         from langchain_core.messages import ToolMessage
 
         original = _first_human(history)
-        used = [m.name for m in history if isinstance(m, ToolMessage)]
-        original_text = (original.content if original else human) or ""
+        used: list[str] = [
+            m.name for m in history if isinstance(m, ToolMessage) and m.name is not None
+        ]
+        original_text = _as_text(original.content) if original else human
         text = original_text.lower()
 
         # Step 1: legal/threat → escalate immediately.
@@ -188,9 +206,7 @@ class MockChatModel(BaseChatModel):
             and not order_id
             and "search_knowledge_base" not in used
         ):
-            return _tool_call(
-                "search_knowledge_base", {"query": "delivered but not received"}
-            )
+            return _tool_call("search_knowledge_base", {"query": "delivered but not received"})
 
         # Otherwise: finalize.
         return _final_answer_from_history(original_text, used)
@@ -288,14 +304,20 @@ def _mock_classify(text: str) -> dict[str, str]:
     return {"category": "general_question", "urgency": "low"}
 
 
-def _mock_safety(
-    customer: Optional[HumanMessage], _draft: str
-) -> dict[str, Any]:
+def _mock_safety(customer: Optional[HumanMessage], _draft: str) -> dict[str, Any]:
     raw = customer.content if customer else ""
     text = (raw if isinstance(raw, str) else "").lower()
     risky = [
-        "legal", "lawyer", "sue", "lawsuit", "attorney", "court",
-        "charged twice", "duplicate charge", "manager", "supervisor",
+        "legal",
+        "lawyer",
+        "sue",
+        "lawsuit",
+        "attorney",
+        "court",
+        "charged twice",
+        "duplicate charge",
+        "manager",
+        "supervisor",
     ]
     for kw in risky:
         if kw in text:

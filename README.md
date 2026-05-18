@@ -104,6 +104,19 @@ uv run pytest
 
 All tests run in mock-LLM mode — no API key required, no network calls.
 
+## Lint, format, and type-check
+
+The repo ships with [ruff](https://docs.astral.sh/ruff/) (linter + formatter) and [ty](https://docs.astral.sh/ty/) (Astral's type checker). Configuration lives in `pyproject.toml`.
+
+```bash
+uv run ruff check        # lint
+uv run ruff check --fix  # lint + autofix
+uv run ruff format       # format
+uv run ty check src      # type-check
+```
+
+All three are green on `main` — `pytest && ruff check && ty check src` is the full pre-commit sequence.
+
 ## Workshop slides
 
 Open [`slides/index.html`](slides/index.html) in any browser. Arrow keys to navigate, press `n` to toggle speaker notes.

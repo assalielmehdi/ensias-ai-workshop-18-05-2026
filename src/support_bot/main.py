@@ -58,9 +58,7 @@ def render(req: TicketRequest, resp: TicketResponse) -> None:
     table.add_row("[bold]Tools used[/]", ", ".join(resp.tools_used) or "-")
     table.add_row("[bold]Reasoning[/]", resp.reasoning_summary)
     console.print(table)
-    console.print(
-        Panel.fit(resp.customer_response, title="Bot reply", border_style="green")
-    )
+    console.print(Panel.fit(resp.customer_response, title="Bot reply", border_style="green"))
 
 
 def main() -> None:

@@ -21,7 +21,7 @@ from typing import Optional, TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
-from .llm import get_chat_model
+from .llm import _as_text, get_chat_model
 from .models import TicketCategory, TicketRequest, TicketResponse, Urgency
 from .prompts import CLASSIFIER_PROMPT, DRAFTER_PROMPT, SAFETY_PROMPT
 from .tools import check_order_status, search_knowledge_base
@@ -50,10 +50,8 @@ def classify_ticket(state: WorkflowState) -> WorkflowState:
 
     req = state["request"]
     llm = get_chat_model()
-    resp = llm.invoke(
-        [SystemMessage(content=CLASSIFIER_PROMPT), HumanMessage(content=req.message)]
-    )
-    parsed = _safe_json(resp.content) or {}
+    resp = llm.invoke([SystemMessage(content=CLASSIFIER_PROMPT), HumanMessage(content=req.message)])
+    parsed = _safe_json(_as_text(resp.content)) or {}
     category = TicketCategory(parsed.get("category", "general_question"))
     urgency = Urgency(parsed.get("urgency", "low"))
     logger.info("classify category=%s urgency=%s", category.value, urgency.value)
@@ -110,10 +108,8 @@ def draft_response(state: WorkflowState) -> WorkflowState:
         f"Context retrieved from our systems:\n{context}\n\n"
         f"Write the reply now."
     )
-    resp = llm.invoke(
-        [SystemMessage(content=DRAFTER_PROMPT), HumanMessage(content=human)]
-    )
-    draft = (resp.content or "").strip()
+    resp = llm.invoke([SystemMessage(content=DRAFTER_PROMPT), HumanMessage(content=human)])
+    draft = _as_text(resp.content).strip()
     return {"draft": draft}
 
 
@@ -123,14 +119,9 @@ def safety_check(state: WorkflowState) -> WorkflowState:
     req = state["request"]
     draft = state.get("draft", "")
     llm = get_chat_model()
-    human = (
-        f"Customer message:\n{req.message}\n\nDraft reply:\n{draft}\n\n"
-        "Decide now."
-    )
-    resp = llm.invoke(
-        [SystemMessage(content=SAFETY_PROMPT), HumanMessage(content=human)]
-    )
-    parsed = _safe_json(resp.content) or {"needs_human": False, "reason": ""}
+    human = f"Customer message:\n{req.message}\n\nDraft reply:\n{draft}\n\nDecide now."
+    resp = llm.invoke([SystemMessage(content=SAFETY_PROMPT), HumanMessage(content=human)])
+    parsed = _safe_json(_as_text(resp.content)) or {"needs_human": False, "reason": ""}
     needs_human = bool(parsed.get("needs_human", False))
 
     # If a human is needed, swap the draft for a safe boilerplate.
@@ -142,8 +133,7 @@ def safety_check(state: WorkflowState) -> WorkflowState:
         )
 
     summary = (
-        f"Workflow path: classify → retrieve → draft → safety_check "
-        f"(needs_human={needs_human})."
+        f"Workflow path: classify → retrieve → draft → safety_check (needs_human={needs_human})."
     )
     return {
         "draft": draft,
@@ -183,7 +173,9 @@ def build_workflow_graph():
     We compile and return it. Callers run it with `.invoke({"request": ...})`.
     """
 
-    builder = StateGraph(WorkflowState)
+    # WorkflowState IS a TypedDict; LangGraph's generic bound is overly strict
+    # and rejects external TypedDict subclasses. Safe to ignore.
+    builder = StateGraph(WorkflowState)  # ty: ignore[invalid-argument-type]
     builder.add_node("classify_ticket", classify_ticket)
     builder.add_node("route_by_category", route_by_category)
     builder.add_node("retrieve_context", retrieve_context)

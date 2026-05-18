@@ -10,6 +10,7 @@ where we rebuild the bot as a true agent loop.
 from __future__ import annotations
 
 import logging
+from typing import Optional, TypedDict
 
 from rich.console import Console
 from rich.table import Table
@@ -21,7 +22,15 @@ from .workflow_graph import run_workflow
 console = Console()
 
 
-CASES = [
+class _Case(TypedDict):
+    id: str
+    label: str
+    message: str
+    order_id: Optional[str]
+    note: str
+
+
+CASES: list[_Case] = [
     {
         "id": "T-001",
         "label": "happy_path_refund",

@@ -32,24 +32,18 @@ def test_check_order_status_unknown():
 
 
 def test_check_refund_policy_eligible_electronics():
-    out = check_refund_policy.invoke(
-        {"product_type": "electronics", "days_since_purchase": 5}
-    )
+    out = check_refund_policy.invoke({"product_type": "electronics", "days_since_purchase": 5})
     assert "eligible" in out.lower()
     assert "human" in out.lower(), "policy tool must never auto-approve refunds"
 
 
 def test_check_refund_policy_expired_electronics():
-    out = check_refund_policy.invoke(
-        {"product_type": "electronics", "days_since_purchase": 30}
-    )
+    out = check_refund_policy.invoke({"product_type": "electronics", "days_since_purchase": 30})
     assert "not eligible" in out.lower()
 
 
 def test_check_refund_policy_gift_longer_window():
-    out = check_refund_policy.invoke(
-        {"product_type": "gift", "days_since_purchase": 35}
-    )
+    out = check_refund_policy.invoke({"product_type": "gift", "days_since_purchase": 35})
     assert "eligible" in out.lower()
 
 

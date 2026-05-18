@@ -23,6 +23,8 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "ty>=0.0.1a1",
 ]
 
 [build-system]
@@ -36,3 +38,48 @@ packages = ["src/support_bot"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Rule families. Curated to be useful for a beginner-friendly workshop repo
+# without being noisy. See https://docs.astral.sh/ruff/rules/ for details.
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports, undefined names, ...)
+    "I",   # isort (import ordering)
+    "B",   # flake8-bugbear (likely bugs)
+    "UP",  # pyupgrade (modern Python idioms)
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",   # line length — handled by the formatter
+    "B008",   # function call in default arg — common with FastAPI Depends
+    "UP007",  # X | Y unions — keep Optional/Union for clarity in tutorials
+    "UP045",  # X | None style — same reason
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use long names, asserts, etc. without complaint.
+"tests/**" = ["B011"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ty.environment]
+root = ["./src", "./tests"]
+python-version = "3.13"
+
+[tool.ty.rules]
+# LangGraph's StateGraph generic bound rejects plain TypedDict subclasses even
+# though it works at runtime — silence the false positive globally rather than
+# sprinkling per-line ignores. See:
+# https://github.com/langchain-ai/langgraph/issues/2080
+# Beginner-friendly project; treat these as warnings, not errors.
+possibly-unresolved-reference = "ignore"

@@ -125,7 +125,13 @@ def main() -> None:
             f"{a_esc} {ag.needs_human}",
             ", ".join(ag.tools_used) or "-",
         )
-        rows.append({"case": asdict(case), "workflow": wf.model_dump(mode="json"), "agent": ag.model_dump(mode="json")})
+        rows.append(
+            {
+                "case": asdict(case),
+                "workflow": wf.model_dump(mode="json"),
+                "agent": ag.model_dump(mode="json"),
+            }
+        )
 
     console.print(table)
     out = Path("eval_results.json")

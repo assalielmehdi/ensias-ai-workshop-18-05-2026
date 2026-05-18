@@ -24,7 +24,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from .config import settings
-from .llm import get_chat_model
+from .llm import _as_text, get_chat_model
 from .models import TicketCategory, TicketRequest, TicketResponse, Urgency
 from .prompts import AGENT_SYSTEM_PROMPT
 from .tools import ALL_TOOLS
@@ -60,9 +60,7 @@ def should_continue(state: AgentState) -> str:
     """Decide whether to call tools, stop, or hit the iteration cap."""
 
     if state.get("iterations", 0) >= settings.agent_max_iterations:
-        logger.warning(
-            "Agent hit max iterations (%d); stopping.", settings.agent_max_iterations
-        )
+        logger.warning("Agent hit max iterations (%d); stopping.", settings.agent_max_iterations)
         return "end"
     last = state["messages"][-1]
     if isinstance(last, AIMessage) and last.tool_calls:
@@ -76,7 +74,9 @@ def should_continue(state: AgentState) -> str:
 def build_agent_graph():
     """Wire up the agent loop."""
 
-    builder = StateGraph(AgentState)
+    # AgentState IS a TypedDict; LangGraph's generic bound is overly strict
+    # and rejects external TypedDict subclasses. Safe to ignore.
+    builder = StateGraph(AgentState)  # ty: ignore[invalid-argument-type]
     builder.add_node("agent", agent_node)
     builder.add_node("tools", ToolNode(ALL_TOOLS))
 
@@ -108,10 +108,8 @@ def run_agent(req: TicketRequest) -> TicketResponse:
     final: AgentState = graph.invoke(initial)
 
     tools_used = _collect_tool_names(final["messages"])
-    last_ai = next(
-        (m for m in reversed(final["messages"]) if isinstance(m, AIMessage)), None
-    )
-    parsed = _parse_final(last_ai.content if last_ai else "")
+    last_ai = next((m for m in reversed(final["messages"]) if isinstance(m, AIMessage)), None)
+    parsed = _parse_final(_as_text(last_ai.content) if last_ai else "")
 
     # Guardrail: if the model never produced a structured answer (e.g. we hit
     # the iteration cap), fall back to a safe human-escalation reply.

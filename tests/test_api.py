@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 
 from support_bot.api import app
 
-
 client = TestClient(app)
 
 
