@@ -1,31 +1,95 @@
-"""STARTER STUB — to be filled in during step-04-fastapi-entrypoint.
+"""FastAPI app — the bot exposed as a backend service.
 
-Goal: expose the bot as a FastAPI service:
-
-    GET  /health
-    POST /workflow/tickets
-    POST /agent/tickets
-    POST /tickets            (convenience, mode in body)
-
-TODOs for students:
-1. Create a `FastAPI()` app.
-2. Add `/health` returning {"status": "ok"}.
-3. Add the three POST endpoints — each takes the typed model and returns
-   `TicketResponse`. The body is the work; just call `run_workflow` / `run_agent`.
-
-See workshop.md (section "1:20 – 1:35") for the walkthrough.
+We keep this file thin on purpose: the API is just a typed envelope around
+`run_workflow` and `run_agent`. The interesting code lives in the graphs.
 """
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, HTTPException
+
+from .agent_graph import run_agent
+from .config import settings
+from .models import (
+    TicketCategory,
+    TicketRequest,
+    TicketRequestWithMode,
+    TicketResponse,
+    Urgency,
+)
+from .workflow_graph import run_workflow
+
+logging.basicConfig(
+    level=settings.log_level,
+    format="%(asctime)s %(levelname)s %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Support Bot — starter",
-    description="The endpoints are not implemented yet. See step-04.",
+    title="Support Bot",
+    description="From Workflow to Agent — customer support AI assistant.",
+    version="0.1.0",
 )
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "note": "Endpoints not implemented in step-00. See step-04-fastapi-entrypoint."}
+    """Liveness probe."""
+
+    return {"status": "ok", "llm_mode": settings.llm_mode, "model": settings.llm_model}
+
+
+@app.post("/workflow/tickets", response_model=TicketResponse)
+def workflow_tickets(req: TicketRequest) -> TicketResponse:
+    """Run the fixed workflow version of the bot."""
+
+    logger.info("POST /workflow/tickets order_id=%s", req.order_id)
+    try:
+        return run_workflow(req)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("workflow failed")
+        return _safe_fallback(str(exc))
+
+
+@app.post("/agent/tickets", response_model=TicketResponse)
+def agent_tickets(req: TicketRequest) -> TicketResponse:
+    """Run the agent-loop version of the bot."""
+
+    logger.info("POST /agent/tickets order_id=%s", req.order_id)
+    try:
+        return run_agent(req)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("agent failed")
+        return _safe_fallback(str(exc))
+
+
+@app.post("/tickets", response_model=TicketResponse)
+def tickets(req: TicketRequestWithMode) -> TicketResponse:
+    """Convenience endpoint: pick workflow or agent via a `mode` field."""
+
+    base = TicketRequest(
+        message=req.message, customer_id=req.customer_id, order_id=req.order_id
+    )
+    if req.mode == "workflow":
+        return workflow_tickets(base)
+    if req.mode == "agent":
+        return agent_tickets(base)
+    raise HTTPException(status_code=400, detail=f"unknown mode: {req.mode}")
+
+
+def _safe_fallback(_internal_error: str) -> TicketResponse:
+    """Never leak stack traces to the customer. Escalate instead."""
+
+    return TicketResponse(
+        category=TicketCategory.ESCALATION_REQUIRED,
+        urgency=Urgency.HIGH,
+        customer_response=(
+            "Sorry — something went wrong on our side. A human teammate will "
+            "follow up with you shortly."
+        ),
+        needs_human=True,
+        tools_used=[],
+        reasoning_summary="Internal error; escalated to human.",
+    )
