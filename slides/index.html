@@ -32,12 +32,13 @@
 
     <!-- 1. Title -->
     <section class="slide title">
-      <div class="kicker">2-hour workshop · ENSIAS · 2026-05-18</div>
-      <h1>From Workflow to Agent</h1>
-      <h2>Building a Customer Support AI Assistant</h2>
-      <p class="subtle" style="margin-top:1.6em">LangChain · LangGraph · FastAPI · Python 3.13</p>
+      <div class="kicker">AI engineering 101 · ENSIAS · 2026-05-18</div>
+      <h1>Build your first AI assistant</h1>
+      <h2>A 2-hour, hands-on intro — we'll build a real customer-support bot in Python.</h2>
+      <p class="subtle" style="margin-top:1.6em">No prior AI experience required · Python · LangChain · LangGraph · FastAPI</p>
       <aside class="notes">
-        <p>Welcome. We'll spend the first 10 minutes on the business problem and concepts, then 90 minutes building, then a 10-minute wrap.</p>
+        <p>Welcome. This is a 101 session — we assume you've written Python and called an HTTP API, nothing else.</p>
+        <p>We'll spend the first 10 minutes on the business problem and concepts, 90 minutes building together, then a 10-minute wrap.</p>
         <p>Repo is already on GitHub. Students should run <code>uv sync --extra dev</code> now if they haven't.</p>
       </aside>
     </section>
@@ -122,9 +123,10 @@
           <text class="edge-label" x="830" y="100" text-anchor="middle">END</text>
         </g>
       </svg>
-      <p class="muted">No loop. No branching except the static <code>route</code> step. The path is the same every ticket.</p>
+      <p class="muted">Workflows <em>can</em> branch and loop — but only along paths <strong>we wrote in code</strong>. The <code>route</code> node here sends refund vs. delivery tickets to different lookups. The LLM never picks what comes next; our Python does.</p>
       <aside class="notes">
-        <p>Point at the diagram: every ticket follows this exact path. The LLM helps inside <em>nodes</em>, but never picks the <em>next</em> node.</p>
+        <p>Important nuance: workflows are not "straight lines." They can branch, loop, retry — anything plain Python can do. What makes them workflows (and not agents) is that all of that control flow is decided by <em>code we wrote</em>, not by the LLM at runtime.</p>
+        <p>In our v1, the <code>route</code> node already does this: a refund ticket pulls different KB snippets than a delivery ticket. We just kept the diagram linear for clarity.</p>
       </aside>
     </section>
 
@@ -155,6 +157,7 @@ builder.add_edge("safety_check", END)
     <!-- 7. Where the workflow breaks -->
     <section class="slide">
       <h2>Where the workflow breaks</h2>
+      <p class="muted" style="margin-top:-6px"><strong>KB</strong> = <em>knowledge base</em>, the policy + FAQ docs the bot searches (<code>data/knowledge_base.md</code>).</p>
       <table>
         <tr><th>Ticket</th><th>What happens</th><th>Why it's wrong</th></tr>
         <tr>
@@ -169,7 +172,7 @@ builder.add_edge("safety_check", END)
         </tr>
         <tr>
           <td>"Gift, late, return window?"</td>
-          <td>Calls KB once, blindly.</td>
+          <td>Searches the knowledge base once, blindly.</td>
           <td class="bad">Real answer needs <code>check_refund_policy("gift", X)</code> — the workflow doesn't decide to call it.</td>
         </tr>
       </table>
@@ -311,11 +314,13 @@ def agent_tickets(req: TicketRequest) -> TicketResponse:
         <tr><td>Guardrails</td><td>Refund tool returns <em>eligibility</em>, never approves. Safety node forces human escalation on legal/threat language.</td></tr>
         <tr><td>Loop safety</td><td>Hard <code>AGENT_MAX_ITERATIONS</code> cap; fallback escalation on overflow.</td></tr>
         <tr><td>Logging</td><td>Every LLM call and tool call → structured log line</td></tr>
+        <tr><td>Tracing</td><td>End-to-end view of each ticket: which nodes ran, every tool call, prompts, latency, token cost. Plug in <a href="https://docs.smith.langchain.com/" target="_blank" rel="noopener">LangSmith</a> or OpenTelemetry — one env var and you get a UI to debug every run.</td></tr>
         <tr><td>Evals</td><td><code>evals.py</code> runs the same 5 tickets through both versions, prints a diff</td></tr>
         <tr><td>Tests</td><td>22 tests; all run in <code>LLM_MODE=mock</code> with zero network</td></tr>
       </table>
       <aside class="notes">
         <p>Most of the engineering effort in real AI systems is here. Building the loop is the easy part; making it safe and observable is the hard part.</p>
+        <p>Tracing is what saves you when an agent does something weird in production. Logs tell you <em>that</em> something happened; tracing tells you <em>why</em> — which prompt, which tool result, how the model interpreted it.</p>
       </aside>
     </section>
 
