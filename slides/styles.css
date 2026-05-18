@@ -1,0 +1,423 @@
+/* Slide deck — minimalist neutral design system, dark + light themes.
+   Fully offline, no external fonts/CDNs. */
+
+/* ─── Design tokens ─────────────────────────────────────────────────── */
+
+:root[data-theme="dark"] {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --surface-3: #232323;
+  --border: #262626;
+  --border-strong: #3a3a3a;
+  --fg: #fafafa;
+  --fg-muted: #a3a3a3;
+  --fg-subtle: #737373;
+  --accent: #fcd34d;            /* warm amber, used sparingly */
+  --accent-fg: #0a0a0a;
+  --good: #86efac;
+  --bad: #fca5a5;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
+            0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --surface-3: #f0f0f0;
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --fg: #0a0a0a;
+  --fg-muted: #525252;
+  --fg-subtle: #737373;
+  --accent: #b45309;
+  --accent-fg: #ffffff;
+  --good: #15803d;
+  --bad: #b91c1c;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.02) inset,
+            0 20px 60px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    system-ui, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  font-size: 20px;
+  line-height: 1.5;
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+#deck {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ─── Slide container ────────────────────────────────────────────────── */
+
+section.slide {
+  display: none;
+  width: min(1120px, 94vw);
+  max-height: 88vh;
+  padding: 56px 64px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: auto;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+section.slide.active { display: block; }
+
+/* Speaker notes live in their own panel — hide the inline source. */
+aside.notes { display: none !important; }
+
+/* ─── Typography ─────────────────────────────────────────────────────── */
+
+h1, h2, h3, h4 {
+  margin: 0 0 0.6em;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+h1 { font-size: 2.6em; letter-spacing: -0.03em; }
+h2 { font-size: 1.7em; }
+h3 { font-size: 1.1em; color: var(--fg-muted); font-weight: 500; }
+h4 { font-size: 0.78em; color: var(--fg-subtle); font-weight: 500;
+     letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.5em; }
+
+p { margin: 0 0 0.9em; color: var(--fg); }
+strong { color: var(--fg); font-weight: 600; }
+em { color: var(--fg-muted); font-style: normal; }
+
+ul, ol {
+  padding-left: 1.4em;
+  margin: 0 0 0.9em;
+}
+li { color: var(--fg); margin-bottom: 0.45em; }
+li::marker { color: var(--fg-subtle); }
+
+a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--border-strong); }
+
+/* Section kicker (uppercase label above title) */
+
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72em;
+  color: var(--fg-subtle);
+  font-weight: 500;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.kicker::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  max-width: 200px;
+}
+
+.muted { color: var(--fg-muted); }
+.subtle { color: var(--fg-subtle); }
+.center { text-align: center; }
+
+/* ─── Code ───────────────────────────────────────────────────────────── */
+
+code, pre {
+  font-family: "JetBrains Mono", "SF Mono", "Menlo", "Consolas", monospace;
+  font-feature-settings: "calt", "ss01";
+}
+
+code {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  font-size: 0.85em;
+}
+
+pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  margin: 14px 0;
+  overflow-x: auto;
+  font-size: 0.82em;
+  line-height: 1.6;
+  color: var(--fg);
+}
+pre code {
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 1em;
+}
+
+/* ─── Cards & grids ──────────────────────────────────────────────────── */
+
+.cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 24px;
+}
+.card h3 { color: var(--fg); margin-top: 0; }
+
+.good { color: var(--good); font-weight: 500; }
+.bad { color: var(--bad); font-weight: 500; }
+
+/* ─── Tables ─────────────────────────────────────────────────────────── */
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.94em;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+th, td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tr:last-child td { border-bottom: 0; }
+th {
+  color: var(--fg-subtle);
+  font-weight: 500;
+  font-size: 0.78em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--surface-2);
+}
+
+/* ─── Diagrams ───────────────────────────────────────────────────────── */
+
+svg.diagram {
+  width: 100%;
+  max-height: 320px;
+  display: block;
+  margin: 14px 0 18px;
+}
+
+.node-box {
+  fill: var(--surface-2);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+.node-box.warm {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.node-text {
+  fill: var(--fg);
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+}
+.edge {
+  stroke: var(--fg-subtle);
+  stroke-width: 1.5;
+  fill: none;
+  marker-end: url(#arrow);
+}
+.edge.dashed { stroke-dasharray: 5 4; }
+.edge-label {
+  fill: var(--fg-muted);
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+/* ─── Chrome (footer / nav) ──────────────────────────────────────────── */
+
+#chrome {
+  position: fixed;
+  bottom: 18px;
+  right: 24px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--fg-subtle);
+  font-size: 13px;
+  z-index: 5;
+}
+
+#counter {
+  font-variant-numeric: tabular-nums;
+  padding: 0 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+button.navbtn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s;
+}
+button.navbtn:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+button.navbtn:active { transform: translateY(1px); }
+
+/* Theme toggle ─ pill switch */
+
+.theme-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+  height: 34px;
+  position: relative;
+  width: 64px;
+  margin-right: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.theme-toggle:hover { border-color: var(--border-strong); }
+
+.theme-toggle .knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--fg);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease;
+  z-index: 2;
+}
+:root[data-theme="light"] .theme-toggle .knob { transform: translateX(30px); }
+
+.theme-toggle .knob > svg { position: absolute; transition: opacity 0.15s ease; }
+:root[data-theme="dark"]  .theme-toggle .knob-sun  { opacity: 0; }
+:root[data-theme="light"] .theme-toggle .knob-moon { opacity: 0; }
+
+/* Hint icons behind the knob — show the destination theme on the empty side. */
+.theme-toggle .icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-subtle);
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 1;
+}
+.theme-toggle .icon.moon { left: 9px; }
+.theme-toggle .icon.sun  { right: 9px; }
+/* Show only the icon on the side the knob is NOT covering. */
+:root[data-theme="dark"]  .theme-toggle .icon.moon { opacity: 0; }
+:root[data-theme="light"] .theme-toggle .icon.sun  { opacity: 0; }
+
+/* Speaker notes panel */
+
+#notes {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 38vh;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 22px 32px 28px;
+  font-size: 15px;
+  color: var(--fg);
+  overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.22s ease;
+  z-index: 10;
+  box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.25);
+}
+#notes.open { transform: translateY(0); }
+#notes h4 {
+  margin: 0 0 10px;
+  color: var(--fg-subtle);
+  font-size: 0.7em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+#notes p { margin: 5px 0 0; line-height: 1.55; color: var(--fg-muted); }
+
+.notes-hint {
+  position: fixed;
+  left: 24px;
+  bottom: 22px;
+  color: var(--fg-subtle);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  z-index: 5;
+}
+.notes-hint kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.92em;
+  color: var(--fg-muted);
+}
+
+/* ─── Title slide variant ────────────────────────────────────────────── */
+
+section.slide.title h1 { font-size: 3.4em; margin-bottom: 0.15em; letter-spacing: -0.035em; }
+section.slide.title h2 { color: var(--fg-muted); font-weight: 400; font-size: 1.4em; }
+
+/* ─── Print-safe SVG arrow color (uses currentColor via marker) ──────── */
