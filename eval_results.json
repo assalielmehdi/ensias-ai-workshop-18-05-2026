@@ -1,0 +1,161 @@
+[
+  {
+    "case": {
+      "id": "T-001",
+      "label": "happy_path_refund",
+      "message": "Hi, I ordered headphones last week. They arrived broken. I want a refund. Order ID: ORD-1007.",
+      "customer_id": "CUST-509",
+      "order_id": "ORD-1007",
+      "expected_category": "refund_request",
+      "expected_needs_human": true
+    },
+    "workflow": {
+      "category": "refund_request",
+      "urgency": "medium",
+      "customer_response": "Thanks for reaching out \u2014 I've pulled up your order. If the item arrived damaged, you're covered: I'll have a teammate confirm the refund and send you a return label by email.",
+      "needs_human": false,
+      "tools_used": [
+        "search_knowledge_base",
+        "check_order_status"
+      ],
+      "reasoning_summary": "Workflow path: classify \u2192 retrieve \u2192 draft \u2192 safety_check (needs_human=False)."
+    },
+    "agent": {
+      "category": "refund_request",
+      "urgency": "medium",
+      "customer_response": "Thanks for letting us know. Damaged-on-arrival items are eligible for return regardless of category. A teammate will confirm the refund and email you a prepaid return label.",
+      "needs_human": true,
+      "tools_used": [
+        "check_order_status",
+        "check_refund_policy"
+      ],
+      "reasoning_summary": "Damaged item: eligible per policy, refund needs human approval."
+    }
+  },
+  {
+    "case": {
+      "id": "T-002",
+      "label": "missing_information",
+      "message": "My package never arrived and I need this fixed ASAP.",
+      "customer_id": null,
+      "order_id": null,
+      "expected_category": "delivery_issue",
+      "expected_needs_human": false
+    },
+    "workflow": {
+      "category": "delivery_issue",
+      "urgency": "medium",
+      "customer_response": "Thank you for reaching out. I want to make sure you get the right help here, so I've flagged this for a teammate \u2014 they'll follow up with you shortly. We're sorry for the inconvenience.",
+      "needs_human": true,
+      "tools_used": [
+        "search_knowledge_base"
+      ],
+      "reasoning_summary": "Workflow path: classify \u2192 retrieve \u2192 draft \u2192 safety_check (needs_human=True)."
+    },
+    "agent": {
+      "category": "delivery_issue",
+      "urgency": "medium",
+      "customer_response": "I'm sorry your package hasn't arrived. To investigate, could you share the order ID and the email used at checkout? Once I have those I'll pull the latest tracking and next steps.",
+      "needs_human": false,
+      "tools_used": [
+        "search_knowledge_base"
+      ],
+      "reasoning_summary": "Asked for missing order ID; no tools could resolve without it."
+    }
+  },
+  {
+    "case": {
+      "id": "T-003",
+      "label": "multi_intent",
+      "message": "I was charged twice, and the item also arrived damaged.",
+      "customer_id": "CUST-502",
+      "order_id": "ORD-1003",
+      "expected_category": "billing_issue",
+      "expected_needs_human": true
+    },
+    "workflow": {
+      "category": "billing_issue",
+      "urgency": "high",
+      "customer_response": "Thank you for reaching out. I want to make sure you get the right help here, so I've flagged this for a teammate \u2014 they'll follow up with you shortly. We're sorry for the inconvenience.",
+      "needs_human": true,
+      "tools_used": [
+        "search_knowledge_base",
+        "check_order_status"
+      ],
+      "reasoning_summary": "Workflow path: classify \u2192 retrieve \u2192 draft \u2192 safety_check (needs_human=True)."
+    },
+    "agent": {
+      "category": "billing_issue",
+      "urgency": "high",
+      "customer_response": "Thank you for flagging this. Duplicate charges have to be reviewed by our billing team; a teammate will reach out shortly.",
+      "needs_human": true,
+      "tools_used": [
+        "escalate_to_human"
+      ],
+      "reasoning_summary": "Escalated duplicate-charge billing issue."
+    }
+  },
+  {
+    "case": {
+      "id": "T-004",
+      "label": "policy_edge_case",
+      "message": "I bought this as a gift, it arrived late, and now the return window may be over. Can you help?",
+      "customer_id": "CUST-515",
+      "order_id": "ORD-1012",
+      "expected_category": "refund_request",
+      "expected_needs_human": false
+    },
+    "workflow": {
+      "category": "delivery_issue",
+      "urgency": "medium",
+      "customer_response": "Thanks for reaching out \u2014 I've pulled up your order. If the item arrived damaged, you're covered: I'll have a teammate confirm the refund and send you a return label by email.",
+      "needs_human": false,
+      "tools_used": [
+        "search_knowledge_base",
+        "check_order_status"
+      ],
+      "reasoning_summary": "Workflow path: classify \u2192 retrieve \u2192 draft \u2192 safety_check (needs_human=False)."
+    },
+    "agent": {
+      "category": "general_question",
+      "urgency": "low",
+      "customer_response": "Thanks for reaching out! Could you share a bit more about what you'd like help with \u2014 an order ID, or the specific question you have?",
+      "needs_human": false,
+      "tools_used": [
+        "check_order_status"
+      ],
+      "reasoning_summary": "No clear intent; asked for clarification."
+    }
+  },
+  {
+    "case": {
+      "id": "T-005",
+      "label": "high_risk_escalation",
+      "message": "I'm furious. I was charged twice and I'm considering legal action.",
+      "customer_id": null,
+      "order_id": null,
+      "expected_category": "escalation_required",
+      "expected_needs_human": true
+    },
+    "workflow": {
+      "category": "escalation_required",
+      "urgency": "high",
+      "customer_response": "Thank you for reaching out. I want to make sure you get the right help here, so I've flagged this for a teammate \u2014 they'll follow up with you shortly. We're sorry for the inconvenience.",
+      "needs_human": true,
+      "tools_used": [
+        "search_knowledge_base"
+      ],
+      "reasoning_summary": "Workflow path: classify \u2192 retrieve \u2192 draft \u2192 safety_check (needs_human=True)."
+    },
+    "agent": {
+      "category": "escalation_required",
+      "urgency": "high",
+      "customer_response": "I'm sorry for the frustration. Because of the seriousness of what you've described, a human teammate from our team will follow up with you within one business day.",
+      "needs_human": true,
+      "tools_used": [
+        "escalate_to_human"
+      ],
+      "reasoning_summary": "Escalated due to legal-action language."
+    }
+  }
+]
