@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>From Workflow to Agent — Customer Support AI</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Apply saved theme BEFORE first paint to avoid flash.
+    (function () {
+      try {
+        var saved = localStorage.getItem("deck-theme");
+        if (saved === "light" || saved === "dark") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (_) {}
+    })();
+  </script>
+</head>
+<body>
+  <main id="deck">
+
+    <!-- Shared SVG arrow marker — uses currentColor so it adapts to theme. -->
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+        </marker>
+      </defs>
+    </svg>
+
+    <!-- 1. Title -->
+    <section class="slide title">
+      <div class="kicker">AI engineering 101 · ENSIAS · 2026-05-18</div>
+      <h1>Build your first AI assistant</h1>
+      <h2>A 2-hour, hands-on intro — we'll build a real customer-support bot in Python.</h2>
+      <p class="subtle" style="margin-top:1.6em">No prior AI experience required · Python · LangChain · LangGraph · FastAPI</p>
+      <aside class="notes">
+        <p>Welcome. This is a 101 session — we assume you've written Python and called an HTTP API, nothing else.</p>
+        <p>We'll spend the first 10 minutes on the business problem and concepts, 90 minutes building together, then a 10-minute wrap.</p>
+        <p>Repo is already on GitHub. Students should run <code>uv sync --extra dev</code> now if they haven't.</p>
+      </aside>
+    </section>
+
+    <!-- 2. Why AI agents matter -->
+    <section class="slide">
+      <div class="kicker">Why this matters</div>
+      <h2>AI agents are eating real backend work</h2>
+      <ul>
+        <li>Most real-world AI features are <strong>not chatbots</strong> — they're <em>automated processes</em> with LLMs in the loop.</li>
+        <li>Companies are replacing tier-1 support, internal ops, and triage flows with agentic systems.</li>
+        <li>The interesting engineering isn't the model — it's the <strong>graph around the model</strong>: tools, routing, guardrails, evals.</li>
+      </ul>
+      <aside class="notes">
+        <p>Goal here is to motivate why we care. Most AI engineering jobs aren't "train a model" — they're "wire up Claude/GPT/etc. into a reliable, testable system." That's what we're going to do today.</p>
+      </aside>
+    </section>
+
+    <!-- 3. Business problem -->
+    <section class="slide">
+      <div class="kicker">Business problem</div>
+      <h2>Support ticket overload</h2>
+      <div class="cols">
+        <div class="card">
+          <h3>The pain</h3>
+          <p>A small e-commerce shop. 500 tickets/day. 3 humans.</p>
+          <p>Most tickets are repetitive: where's my order, refund status, broken item.</p>
+          <p>Customers wait 24h+ for replies.</p>
+        </div>
+        <div class="card">
+          <h3>The ask</h3>
+          <p>Auto-triage every ticket: classify, gather info, draft a reply, flag risky ones for a human.</p>
+          <p>Cheap, fast, safe. No bad refunds. No leaked PII.</p>
+        </div>
+      </div>
+      <aside class="notes">
+        <p>Concrete domain matters. We're not building "an agent" in the abstract — we're solving a real problem that has constraints (no auto-approving refunds, must escalate legal threats, must not hallucinate orders).</p>
+      </aside>
+    </section>
+
+    <!-- 4. What is an agentic workflow? -->
+    <section class="slide">
+      <div class="kicker">Concept</div>
+      <h2>What is an <em>agentic workflow</em>?</h2>
+      <p>A <strong>predefined code path</strong> where each step may use an LLM or tool, but the <strong>sequence is hand-written</strong>.</p>
+      <ul>
+        <li>Predictable: you can draw it on a whiteboard.</li>
+        <li>Easy to test: every node has a fixed input and output.</li>
+        <li>Limited: the LLM never decides "do I need another tool call?"</li>
+      </ul>
+      <p class="muted">Anthropic's term, from <em>Building Effective Agents</em>: "workflows are systems where LLMs and tools are orchestrated through predefined code paths."</p>
+      <aside class="notes">
+        <p>Key sentence: the <em>sequence</em> is hand-written. The LLM is a worker inside someone else's script.</p>
+      </aside>
+    </section>
+
+    <!-- 5. Workflow architecture diagram -->
+    <section class="slide">
+      <h2>Workflow architecture (our v1)</h2>
+      <svg class="diagram" viewBox="0 0 900 220">
+        <g font-family="inherit">
+          <rect class="node-box" x="20"  y="80" width="120" height="60" rx="10"/>
+          <text class="node-text" x="80"  y="115" text-anchor="middle">classify</text>
+
+          <rect class="node-box" x="170" y="80" width="120" height="60" rx="10"/>
+          <text class="node-text" x="230" y="115" text-anchor="middle">route</text>
+
+          <rect class="node-box" x="320" y="80" width="140" height="60" rx="10"/>
+          <text class="node-text" x="390" y="115" text-anchor="middle">retrieve_context</text>
+
+          <rect class="node-box" x="490" y="80" width="140" height="60" rx="10"/>
+          <text class="node-text" x="560" y="115" text-anchor="middle">draft_response</text>
+
+          <rect class="node-box warm" x="660" y="80" width="140" height="60" rx="10"/>
+          <text class="node-text" x="730" y="115" text-anchor="middle">safety_check</text>
+
+          <path class="edge" d="M 140 110 L 170 110"/>
+          <path class="edge" d="M 290 110 L 320 110"/>
+          <path class="edge" d="M 460 110 L 490 110"/>
+          <path class="edge" d="M 630 110 L 660 110"/>
+          <path class="edge" d="M 800 110 L 860 110"/>
+          <text class="edge-label" x="830" y="100" text-anchor="middle">END</text>
+        </g>
+      </svg>
+      <p class="muted">Workflows <em>can</em> branch and loop — but only along paths <strong>we wrote in code</strong>. The <code>route</code> node here sends refund vs. delivery tickets to different lookups. The LLM never picks what comes next; our Python does.</p>
+      <aside class="notes">
+        <p>Important nuance: workflows are not "straight lines." They can branch, loop, retry — anything plain Python can do. What makes them workflows (and not agents) is that all of that control flow is decided by <em>code we wrote</em>, not by the LLM at runtime.</p>
+        <p>In our v1, the <code>route</code> node already does this: a refund ticket pulls different KB snippets than a delivery ticket. We just kept the diagram linear for clarity.</p>
+      </aside>
+    </section>
+
+    <!-- 6. Build v1: workflow chatbot -->
+    <section class="slide">
+      <h2>Build v1: workflow chatbot</h2>
+      <p>We're in <code>src/support_bot/workflow_graph.py</code>. Each node is a small function:</p>
+<pre><code>def classify_ticket(state):
+    resp = llm.invoke([
+        SystemMessage(CLASSIFIER_PROMPT),
+        HumanMessage(state["request"].message),
+    ])
+    return {"category": ..., "urgency": ...}
+</code></pre>
+<pre><code>builder = StateGraph(WorkflowState)
+builder.add_edge(START, "classify_ticket")
+builder.add_edge("classify_ticket", "route_by_category")
+builder.add_edge("route_by_category", "retrieve_context")
+builder.add_edge("retrieve_context", "draft_response")
+builder.add_edge("draft_response", "safety_check")
+builder.add_edge("safety_check", END)
+</code></pre>
+      <aside class="notes">
+        <p>Live-code the classify and safety_check nodes, then run <code>uv run python -m support_bot.main --mode workflow --ticket T-001</code> for the happy-path refund.</p>
+      </aside>
+    </section>
+
+    <!-- 7. Where the workflow breaks -->
+    <section class="slide">
+      <h2>Where the workflow breaks</h2>
+      <p class="muted" style="margin-top:-6px"><strong>KB</strong> = <em>knowledge base</em>, the policy + FAQ docs the bot searches (<code>data/knowledge_base.md</code>).</p>
+      <table>
+        <tr><th>Ticket</th><th>What happens</th><th>Why it's wrong</th></tr>
+        <tr>
+          <td>"My package never arrived"</td>
+          <td>Drafts a reply asking for order ID.</td>
+          <td class="bad">No way to <em>then</em> call <code>check_order_status</code> when the customer answers.</td>
+        </tr>
+        <tr>
+          <td>"Charged twice + item damaged"</td>
+          <td>Single category. Single retrieval. Half the problem ignored.</td>
+          <td class="bad">Workflow can't handle <em>multi-intent</em>.</td>
+        </tr>
+        <tr>
+          <td>"Gift, late, return window?"</td>
+          <td>Searches the knowledge base once, blindly.</td>
+          <td class="bad">Real answer needs <code>check_refund_policy("gift", X)</code> — the workflow doesn't decide to call it.</td>
+        </tr>
+      </table>
+      <p class="muted">Run <code>uv run python -m support_bot.main --mode workflow</code> to see all five samples.</p>
+      <aside class="notes">
+        <p>Use this as a teaching moment: workflows are great until the path depends on what an earlier step found. Then you either keep adding branches (and the code becomes a tangle) or you let the LLM drive.</p>
+      </aside>
+    </section>
+
+    <!-- 8. What is an agent? -->
+    <section class="slide">
+      <div class="kicker">Concept</div>
+      <h2>What is a <em>true agent</em>?</h2>
+      <p>A system where the LLM <strong>dynamically decides</strong> what to do next:</p>
+      <ul>
+        <li>Look at the current state.</li>
+        <li>Choose: call a tool, ask a clarifying question, or finish.</li>
+        <li>Observe the result.</li>
+        <li>Repeat — until done <em>or</em> a guardrail stops it.</li>
+      </ul>
+      <p>Anthropic: <em>"agents are systems where LLMs dynamically direct their own processes and tool usage."</em></p>
+      <p class="muted">The path is not hand-written. The <strong>contract</strong> is (prompt + tools + iteration cap).</p>
+      <aside class="notes">
+        <p>The teaching message: <strong>Not every AI system that uses tools is an agent.</strong> Workflows use tools too. What makes it an agent is the loop where the model picks the next step.</p>
+      </aside>
+    </section>
+
+    <!-- 9. Agent loop architecture -->
+    <section class="slide">
+      <h2>Agent loop architecture (our v2)</h2>
+      <svg class="diagram" viewBox="0 0 800 280">
+        <g font-family="inherit">
+          <rect class="node-box" x="80"  y="100" width="160" height="70" rx="12"/>
+          <text class="node-text" x="160" y="140" text-anchor="middle">agent (LLM)</text>
+
+          <rect class="node-box warm" x="420" y="100" width="160" height="70" rx="12"/>
+          <text class="node-text" x="500" y="140" text-anchor="middle">tools</text>
+
+          <path class="edge" d="M 20 135 L 80 135"/>
+          <text class="edge-label" x="40" y="125" text-anchor="middle">START</text>
+
+          <path class="edge" d="M 240 120 C 320 80, 380 80, 420 120"/>
+          <text class="edge-label" x="330" y="80" text-anchor="middle">tool needed</text>
+
+          <path class="edge" d="M 420 160 C 380 200, 320 200, 240 160"/>
+          <text class="edge-label" x="330" y="220" text-anchor="middle">observation</text>
+
+          <path class="edge dashed" d="M 240 135 L 720 135"/>
+          <text class="edge-label" x="600" y="125">done → END</text>
+        </g>
+      </svg>
+      <p class="muted">One LLM node. One tool node. One conditional edge. Everything else is guardrails.</p>
+      <aside class="notes">
+        <p>Two nodes, one conditional. That's it. The "intelligence" lives in the prompt and the model — not in the graph.</p>
+      </aside>
+    </section>
+
+    <!-- 10. Build v2 LangGraph agent -->
+    <section class="slide">
+      <h2>Build v2: LangGraph agent</h2>
+<pre><code>def agent_node(state):
+    llm = get_chat_model().bind_tools(ALL_TOOLS)
+    response = llm.invoke(state["messages"])
+    return {"messages": [response],
+            "iterations": state["iterations"] + 1}
+
+def should_continue(state):
+    if state["iterations"] >= MAX_ITER:
+        return "end"             # guardrail
+    if state["messages"][-1].tool_calls:
+        return "tools"
+    return "end"
+
+builder.add_node("agent", agent_node)
+builder.add_node("tools", ToolNode(ALL_TOOLS))
+builder.add_conditional_edges("agent", should_continue,
+                              {"tools": "tools", "end": END})
+builder.add_edge("tools", "agent")
+</code></pre>
+      <aside class="notes">
+        <p>Walk through the conditional edge — that's the bit that's different from a workflow. The LLM's response decides whether we go to tools or to END.</p>
+      </aside>
+    </section>
+
+    <!-- 11. Tools, observations, stopping -->
+    <section class="slide">
+      <h2>Tools, observations, stopping conditions</h2>
+      <div class="cols">
+        <div class="card">
+          <h3>Tools (just typed Python functions)</h3>
+          <ul>
+            <li><code>search_knowledge_base(query)</code></li>
+            <li><code>check_order_status(order_id)</code></li>
+            <li><code>check_refund_policy(...)</code></li>
+            <li><code>escalate_to_human(reason)</code></li>
+          </ul>
+          <p class="muted">Docstrings are the LLM's manual. Spend time on them.</p>
+        </div>
+        <div class="card">
+          <h3>When does the loop stop?</h3>
+          <ul>
+            <li>Model emits a <strong>final</strong> message (no tool calls).</li>
+            <li>Model calls <code>escalate_to_human</code>.</li>
+            <li><strong>Iteration cap</strong> hit (we set 6).</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="notes">
+        <p>Three stopping conditions. Always include the iteration cap — agents <em>will</em> loop forever if you let them.</p>
+      </aside>
+    </section>
+
+    <!-- 12. FastAPI -->
+    <section class="slide">
+      <h2>Turning the bot into a backend service</h2>
+<pre><code>@app.post("/agent/tickets", response_model=TicketResponse)
+def agent_tickets(req: TicketRequest) -> TicketResponse:
+    return run_agent(req)
+</code></pre>
+      <p>That's the whole endpoint. The API is a typed envelope around <code>run_agent</code> / <code>run_workflow</code>.</p>
+      <ul>
+        <li><code>GET /health</code> — liveness</li>
+        <li><code>POST /workflow/tickets</code></li>
+        <li><code>POST /agent/tickets</code></li>
+        <li><code>POST /tickets</code> — convenience endpoint, <code>mode</code> in the body</li>
+      </ul>
+      <p class="muted">Try it: <code>uv run uvicorn support_bot.api:app --reload</code> → open <code>/docs</code>.</p>
+      <aside class="notes">
+        <p>The point: an "AI agent" in production is just a backend service. Same Pydantic models, same logging, same tests, same FastAPI patterns you'd use for anything else.</p>
+      </aside>
+    </section>
+
+    <!-- 13. Production concerns -->
+    <section class="slide">
+      <h2>Production concerns</h2>
+      <table>
+        <tr><th>Concern</th><th>What we do</th></tr>
+        <tr><td>Structured output</td><td>Pydantic <code>TicketResponse</code> on every reply</td></tr>
+        <tr><td>Guardrails</td><td>Refund tool returns <em>eligibility</em>, never approves. Safety node forces human escalation on legal/threat language.</td></tr>
+        <tr><td>Loop safety</td><td>Hard <code>AGENT_MAX_ITERATIONS</code> cap; fallback escalation on overflow.</td></tr>
+        <tr><td>Logging</td><td>Every LLM call and tool call → structured log line</td></tr>
+        <tr><td>Tracing</td><td>End-to-end view of each ticket: which nodes ran, every tool call, prompts, latency, token cost. Plug in <a href="https://docs.smith.langchain.com/" target="_blank" rel="noopener">LangSmith</a> or OpenTelemetry — one env var and you get a UI to debug every run.</td></tr>
+        <tr><td>Evals</td><td><code>evals.py</code> runs the same 5 tickets through both versions, prints a diff</td></tr>
+        <tr><td>Tests</td><td>22 tests; all run in <code>LLM_MODE=mock</code> with zero network</td></tr>
+      </table>
+      <aside class="notes">
+        <p>Most of the engineering effort in real AI systems is here. Building the loop is the easy part; making it safe and observable is the hard part.</p>
+        <p>Tracing is what saves you when an agent does something weird in production. Logs tell you <em>that</em> something happened; tracing tells you <em>why</em> — which prompt, which tool result, how the model interpreted it.</p>
+      </aside>
+    </section>
+
+    <!-- 14. Workflow vs Agent comparison -->
+    <section class="slide">
+      <h2>Workflow vs Agent — when to pick which?</h2>
+      <table>
+        <tr><th></th><th class="good">Workflow</th><th class="good">Agent</th></tr>
+        <tr><td>Path is predictable</td><td>✓</td><td></td></tr>
+        <tr><td>Needs to react to tool output</td><td></td><td>✓</td></tr>
+        <tr><td>Easy to test</td><td>✓</td><td>Harder (non-determinism)</td></tr>
+        <tr><td>Cheap latency / cost</td><td>✓</td><td>Multi-turn = more tokens</td></tr>
+        <tr><td>Multi-intent tickets</td><td>✗</td><td>✓</td></tr>
+        <tr><td>You can draw it on a whiteboard</td><td>✓</td><td>Only the loop</td></tr>
+      </table>
+      <p class="muted center" style="margin-top:24px">
+        <strong>Start simple. Add agentic complexity only when justified.</strong>
+      </p>
+      <aside class="notes">
+        <p>This is the takeaway slide. Read the bottom line. Many real systems are a workflow with one agentic step inside it, not a full agent.</p>
+      </aside>
+    </section>
+
+    <!-- 15. Final demo -->
+    <section class="slide">
+      <h2>Final demo</h2>
+      <ol>
+        <li><code>uv run uvicorn support_bot.api:app --reload</code></li>
+        <li>Hit <code>POST /workflow/tickets</code> with the 5 sample tickets.</li>
+        <li>Hit <code>POST /agent/tickets</code> with the same tickets.</li>
+        <li>Run <code>uv run python -m support_bot.evals</code> to see the comparison.</li>
+        <li>Run <code>uv run pytest</code> — all green in mock mode.</li>
+      </ol>
+      <aside class="notes">
+        <p>Have these commands ready in a separate terminal. The eval table is the punchline — it shows the agent handling multi-intent / missing-info better than the workflow.</p>
+      </aside>
+    </section>
+
+    <!-- 16. Takeaways -->
+    <section class="slide">
+      <h2>Takeaways</h2>
+      <ul>
+        <li>An <strong>agentic workflow</strong> = LLM/tools inside a hand-written pipeline. Predictable, testable, limited.</li>
+        <li>A <strong>true agent</strong> = LLM-driven loop with tools. Flexible, but needs guardrails.</li>
+        <li>Not every AI system that uses tools is an agent.</li>
+        <li>Start with a workflow. Move to an agent only when the path depends on what tools return.</li>
+        <li>Production AI is <strong>backend engineering</strong> with one extra component. The boring parts (types, logging, tests, FastAPI) are still 90% of the work.</li>
+      </ul>
+      <h3 style="margin-top:32px">Next steps</h3>
+      <ul>
+        <li>Plug a real LLM into <code>.env</code> and watch the agent reason.</li>
+        <li>Add a fifth tool (e.g. <code>create_return_label</code>) and update the prompt.</li>
+        <li>Replace the in-memory KB with a vector store.</li>
+        <li>Add streaming, caching, and tracing (LangSmith / OpenTelemetry).</li>
+      </ul>
+      <aside class="notes">
+        <p>End with the homework. Encourage students to fork and extend.</p>
+      </aside>
+    </section>
+
+  </main>
+
+  <div id="chrome">
+    <button id="theme-toggle" class="theme-toggle" aria-label="toggle theme" title="Toggle theme (T)">
+      <span class="icon moon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+          <path d="M6 1.5a6.5 6.5 0 1 0 8.5 8.5A7 7 0 0 1 6 1.5z"/>
+        </svg>
+      </span>
+      <span class="icon sun" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="8" cy="8" r="3"/>
+          <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3"/>
+        </svg>
+      </span>
+      <span class="knob" aria-hidden="true">
+        <svg class="knob-moon" viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+          <path d="M6 1.5a6.5 6.5 0 1 0 8.5 8.5A7 7 0 0 1 6 1.5z"/>
+        </svg>
+        <svg class="knob-sun" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="8" cy="8" r="3"/>
+          <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3"/>
+        </svg>
+      </span>
+    </button>
+    <button id="prev" class="navbtn" aria-label="previous slide">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3 5 8l5 5"/>
+      </svg>
+    </button>
+    <span id="counter">1 / 16</span>
+    <button id="next" class="navbtn" aria-label="next slide">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3l5 5-5 5"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="notes-hint">
+    <kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>N</kbd> notes · <kbd>T</kbd> theme
+  </div>
+
+  <aside id="notes">
+    <h4>Speaker notes</h4>
+    <div id="notes-body"></div>
+  </aside>
+
+  <script src="script.js"></script>
+</body>
+</html>

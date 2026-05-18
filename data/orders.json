@@ -1,0 +1,47 @@
+{
+  "ORD-1001": {
+    "order_id": "ORD-1001",
+    "customer_id": "CUST-501",
+    "items": [{"sku": "SHIRT-BLU-M", "name": "Blue T-Shirt (M)", "product_type": "apparel", "qty": 2}],
+    "status": "delivered",
+    "ordered_at": "2026-04-22",
+    "delivered_at": "2026-04-26",
+    "total_usd": 39.98
+  },
+  "ORD-1003": {
+    "order_id": "ORD-1003",
+    "customer_id": "CUST-502",
+    "items": [{"sku": "MUG-CER-WHT", "name": "Ceramic Mug", "product_type": "accessory", "qty": 1}],
+    "status": "in_transit",
+    "ordered_at": "2026-05-12",
+    "delivered_at": null,
+    "total_usd": 14.50
+  },
+  "ORD-1007": {
+    "order_id": "ORD-1007",
+    "customer_id": "CUST-509",
+    "items": [{"sku": "HDP-WLS-BLK", "name": "Wireless Headphones", "product_type": "electronics", "qty": 1}],
+    "status": "delivered",
+    "ordered_at": "2026-05-09",
+    "delivered_at": "2026-05-12",
+    "total_usd": 89.99
+  },
+  "ORD-1012": {
+    "order_id": "ORD-1012",
+    "customer_id": "CUST-515",
+    "items": [{"sku": "BOOK-AI-101", "name": "Intro to AI (gift wrap)", "product_type": "gift", "qty": 1}],
+    "status": "delivered",
+    "ordered_at": "2026-03-30",
+    "delivered_at": "2026-04-18",
+    "total_usd": 24.00
+  },
+  "ORD-1020": {
+    "order_id": "ORD-1020",
+    "customer_id": "CUST-520",
+    "items": [{"sku": "CHRG-USBC-20W", "name": "USB-C Charger", "product_type": "electronics", "qty": 1}],
+    "status": "lost",
+    "ordered_at": "2026-05-01",
+    "delivered_at": null,
+    "total_usd": 19.99
+  }
+}

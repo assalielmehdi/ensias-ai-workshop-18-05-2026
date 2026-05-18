@@ -1,0 +1,37 @@
+[
+  {
+    "id": "T-001",
+    "label": "happy_path_refund",
+    "message": "Hi, I ordered headphones last week. They arrived broken. I want a refund. Order ID: ORD-1007.",
+    "customer_id": "CUST-509",
+    "order_id": "ORD-1007"
+  },
+  {
+    "id": "T-002",
+    "label": "missing_information",
+    "message": "My package never arrived and I need this fixed ASAP.",
+    "customer_id": null,
+    "order_id": null
+  },
+  {
+    "id": "T-003",
+    "label": "multi_intent",
+    "message": "I was charged twice, and the item also arrived damaged.",
+    "customer_id": "CUST-502",
+    "order_id": "ORD-1003"
+  },
+  {
+    "id": "T-004",
+    "label": "policy_edge_case",
+    "message": "I bought this as a gift, it arrived late, and now the return window may be over. Can you help?",
+    "customer_id": "CUST-515",
+    "order_id": "ORD-1012"
+  },
+  {
+    "id": "T-005",
+    "label": "high_risk_escalation",
+    "message": "I'm furious. I was charged twice and I'm considering legal action.",
+    "customer_id": null,
+    "order_id": null
+  }
+]
