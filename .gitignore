@@ -35,3 +35,6 @@ Thumbs.db
 
 # Generated artifacts
 eval_results.json
+
+# Local tool config
+.claude/

@@ -1,30 +1,41 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>From Workflow to Agent — Customer Support AI</title>
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Apply saved theme BEFORE first paint to avoid flash.
+    (function () {
+      try {
+        var saved = localStorage.getItem("deck-theme");
+        if (saved === "light" || saved === "dark") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (_) {}
+    })();
+  </script>
 </head>
 <body>
   <main id="deck">
 
-    <!-- Shared SVG arrow marker -->
+    <!-- Shared SVG arrow marker — uses currentColor so it adapts to theme. -->
     <svg width="0" height="0" style="position:absolute">
       <defs>
         <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
                 markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#9aa4b2" />
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
         </marker>
       </defs>
     </svg>
 
     <!-- 1. Title -->
-    <section class="slide center">
+    <section class="slide title">
       <div class="kicker">2-hour workshop · ENSIAS · 2026-05-18</div>
       <h1>From Workflow to Agent</h1>
-      <h2 style="color:var(--accent-2)">Building a Customer Support AI Assistant</h2>
-      <p class="muted">LangChain · LangGraph · FastAPI · Python 3.13</p>
+      <h2>Building a Customer Support AI Assistant</h2>
+      <p class="subtle" style="margin-top:1.6em">LangChain · LangGraph · FastAPI · Python 3.13</p>
       <aside class="notes">
         <p>Welcome. We'll spend the first 10 minutes on the business problem and concepts, then 90 minutes building, then a 10-minute wrap.</p>
         <p>Repo is already on GitHub. Students should run <code>uv sync --extra dev</code> now if they haven't.</p>
@@ -368,12 +379,44 @@ def agent_tickets(req: TicketRequest) -> TicketResponse:
   </main>
 
   <div id="chrome">
-    <button id="prev" class="navbtn" aria-label="previous">←</button>
+    <button id="theme-toggle" class="theme-toggle" aria-label="toggle theme" title="Toggle theme (T)">
+      <span class="icon moon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+          <path d="M6 1.5a6.5 6.5 0 1 0 8.5 8.5A7 7 0 0 1 6 1.5z"/>
+        </svg>
+      </span>
+      <span class="icon sun" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <circle cx="8" cy="8" r="3"/>
+          <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3"/>
+        </svg>
+      </span>
+      <span class="knob" aria-hidden="true">
+        <svg class="knob-moon" viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+          <path d="M6 1.5a6.5 6.5 0 1 0 8.5 8.5A7 7 0 0 1 6 1.5z"/>
+        </svg>
+        <svg class="knob-sun" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="8" cy="8" r="3"/>
+          <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3"/>
+        </svg>
+      </span>
+    </button>
+    <button id="prev" class="navbtn" aria-label="previous slide">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3 5 8l5 5"/>
+      </svg>
+    </button>
     <span id="counter">1 / 16</span>
-    <button id="next" class="navbtn" aria-label="next">→</button>
+    <button id="next" class="navbtn" aria-label="next slide">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3l5 5-5 5"/>
+      </svg>
+    </button>
   </div>
 
-  <div class="notes-hint">← → to navigate · <strong>N</strong> toggles speaker notes</div>
+  <div class="notes-hint">
+    <kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>N</kbd> notes · <kbd>T</kbd> theme
+  </div>
 
   <aside id="notes">
     <h4>Speaker notes</h4>

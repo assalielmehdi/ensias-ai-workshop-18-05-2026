@@ -1,4 +1,4 @@
-// Minimal slide controller: arrow-key + click nav, "n" toggles speaker notes.
+// Slide controller: arrow-key + click nav, "n" toggles notes, "t" toggles theme.
 
 (function () {
   const slides = Array.from(document.querySelectorAll("section.slide"));
@@ -7,6 +7,22 @@
   const notesBody = document.getElementById("notes-body");
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
+  const themeBtn = document.getElementById("theme-toggle");
+
+  // Theme — persisted to localStorage, applied via [data-theme] on <html>.
+  function setTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("deck-theme", t); } catch (_) {}
+    if (themeBtn) themeBtn.setAttribute("aria-pressed", t === "light");
+  }
+  function toggleTheme() {
+    const cur = document.documentElement.getAttribute("data-theme") || "dark";
+    setTheme(cur === "dark" ? "light" : "dark");
+  }
+  themeBtn && themeBtn.addEventListener("click", toggleTheme);
+  setTheme(document.documentElement.getAttribute("data-theme") || "dark");
+
+  // Slide navigation.
 
   function indexFromHash() {
     const m = /^#s=(\d+)$/.exec(window.location.hash);
@@ -36,7 +52,6 @@
   function prev() { show(Math.max(current - 1, 0)); }
 
   window.addEventListener("keydown", (e) => {
-    // Don't capture keys while typing in form fields (just in case).
     const tag = (e.target.tagName || "").toLowerCase();
     if (tag === "input" || tag === "textarea") return;
     switch (e.key) {
@@ -62,6 +77,10 @@
       case "n":
       case "N":
         notesPanel.classList.toggle("open");
+        break;
+      case "t":
+      case "T":
+        toggleTheme();
         break;
     }
   });
