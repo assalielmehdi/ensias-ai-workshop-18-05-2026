@@ -43,13 +43,32 @@
       </aside>
     </section>
 
-    <!-- 2. Why AI agents matter -->
+    <!-- 2. Setup -->
+    <section class="slide">
+      <div class="kicker">Before we start</div>
+      <h2>Get your environment ready</h2>
+      <p>One clone, one install, one verify. Should take ~90 seconds.</p>
+<pre class="cmd">git clone git@github.com:assalielmehdi/ensias-ai-workshop-18-05-2026.git
+cd ensias-ai-workshop-18-05-2026
+uv sync --extra dev
+cp .env.example .env</pre>
+      <p class="muted">Leave <code>LLM_MODE=mock</code> in <code>.env</code> for now — every demo runs offline with a deterministic stub. No API key required.</p>
+      <p><strong>Sanity check:</strong></p>
+<pre class="cmd">uv run pytest</pre>
+<pre class="out">8 passed in 0.07s</pre>
+      <p class="muted">8 tests at this checkpoint (just the tool tests). We'll add more as we go.</p>
+      <aside class="notes">
+        <p>Make sure everyone is unblocked here before moving on. Common issues: Python 3.13 not installed (uv handles it), wrong working directory, .env not copied.</p>
+      </aside>
+    </section>
+
+    <!-- 3. Why AI agents matter -->
     <section class="slide">
       <div class="kicker">Why this matters</div>
-      <h2>AI agents are eating real backend work</h2>
+      <h2>AI is eating real backend work</h2>
       <ul>
         <li>Most real-world AI features are <strong>not chatbots</strong> — they're <em>automated processes</em> with LLMs in the loop.</li>
-        <li>Companies are replacing tier-1 support, internal ops, and triage flows with agentic systems.</li>
+        <li>Companies are replacing tier-1 support, internal ops, and triage with these systems.</li>
         <li>The interesting engineering isn't the model — it's the <strong>graph around the model</strong>: tools, routing, guardrails, evals.</li>
       </ul>
       <aside class="notes">
@@ -57,7 +76,7 @@
       </aside>
     </section>
 
-    <!-- 3. Business problem -->
+    <!-- 4. Business problem -->
     <section class="slide">
       <div class="kicker">Business problem</div>
       <h2>Support ticket overload</h2>
@@ -79,7 +98,7 @@
       </aside>
     </section>
 
-    <!-- 4. What is an agentic workflow? -->
+    <!-- 5. What is an agentic workflow? -->
     <section class="slide">
       <div class="kicker">Concept</div>
       <h2>What is an <em>agentic workflow</em>?</h2>
@@ -95,7 +114,7 @@
       </aside>
     </section>
 
-    <!-- 5. Workflow architecture diagram -->
+    <!-- 6. Workflow architecture diagram -->
     <section class="slide">
       <h2>Workflow architecture (our v1)</h2>
       <svg class="diagram" viewBox="0 0 900 220">
@@ -130,59 +149,90 @@
       </aside>
     </section>
 
-    <!-- 6. Build v1: workflow chatbot -->
+    <!-- 7. Build v1: workflow chatbot -->
     <section class="slide">
-      <h2>Build v1: workflow chatbot</h2>
-      <p>We're in <code>src/support_bot/workflow_graph.py</code>. Each node is a small function:</p>
-<pre><code>def classify_ticket(state):
-    resp = llm.invoke([
-        SystemMessage(CLASSIFIER_PROMPT),
-        HumanMessage(state["request"].message),
-    ])
-    return {"category": ..., "urgency": ...}
-</code></pre>
-<pre><code>builder = StateGraph(WorkflowState)
-builder.add_edge(START, "classify_ticket")
-builder.add_edge("classify_ticket", "route_by_category")
-builder.add_edge("route_by_category", "retrieve_context")
-builder.add_edge("retrieve_context", "draft_response")
-builder.add_edge("draft_response", "safety_check")
-builder.add_edge("safety_check", END)
-</code></pre>
+      <h2>Build v1: the workflow chatbot</h2>
+      <div class="checkpoint">
+        <span class="checkpoint-label">Checkpoint</span>
+        <code>git checkout step-01-workflow-chatbot</code>
+      </div>
+      <p>This branch implements the 5-node graph from the diagram. The interesting file is <code>src/support_bot/workflow_graph.py</code> (~150 lines, one function per node). Open it if you're curious; we'll mostly look at the output.</p>
+      <p><strong>Run it on the happy-path ticket:</strong></p>
+<pre class="cmd">uv run python -m support_bot.main --mode workflow --ticket T-001</pre>
+      <p class="muted">The customer: <em>"Hi, I ordered headphones last week. They arrived broken. I want a refund. Order ID: ORD-1007."</em></p>
       <aside class="notes">
-        <p>Live-code the classify and safety_check nodes, then run <code>uv run python -m support_bot.main --mode workflow --ticket T-001</code> for the happy-path refund.</p>
+        <p>If anyone is on a slow laptop, just walk them through the screenshot on the next slide. The point is the output, not the file.</p>
+        <p>If you want to show one function, show <code>classify_ticket</code> — it's the simplest LLM call in the codebase.</p>
       </aside>
     </section>
 
-    <!-- 7. Where the workflow breaks -->
+    <!-- 8. Workflow output: happy path -->
+    <section class="slide">
+      <div class="kicker">Output · T-001 happy path</div>
+      <h2>The workflow does fine here</h2>
+<pre class="out">───── Mode: workflow  |  LLM: mock ─────
+─────── T-001 — happy_path_refund ───────
+<span class="hi">Category</span>     refund_request
+<span class="hi">Urgency</span>      medium
+<span class="hi">Needs human</span>  False
+<span class="hi">Tools used</span>   <span class="acc">search_knowledge_base, check_order_status</span>
+<span class="hi">Reasoning</span>    Workflow path: classify → retrieve → draft → safety_check
+
+╭─ Bot reply ─╮
+│ Thanks for reaching out — I've pulled up your order. If the
+│ item arrived damaged, you're covered: I'll have a teammate
+│ confirm the refund and send you a return label by email.
+╰─────────────╯</pre>
+      <p class="muted">Order ID present + clear single intent + KB has the answer → the fixed pipeline gets it right.</p>
+      <aside class="notes">
+        <p>Point out: the LLM was called inside <em>nodes</em> (classify, draft, safety) — but our Python decided the order. Same structure for every ticket.</p>
+      </aside>
+    </section>
+
+    <!-- 9. Where the workflow breaks -->
     <section class="slide">
       <h2>Where the workflow breaks</h2>
-      <p class="muted" style="margin-top:-6px"><strong>KB</strong> = <em>knowledge base</em>, the policy + FAQ docs the bot searches (<code>data/knowledge_base.md</code>).</p>
+      <div class="checkpoint">
+        <span class="checkpoint-label">Checkpoint</span>
+        <code>git checkout step-02-workflow-limitations</code>
+      </div>
+      <p>Same workflow, but now we run it across <em>all 5</em> sample tickets and annotate each result with the limitation it exposes.</p>
+<pre class="cmd">uv run python -m support_bot.workflow_demo</pre>
+      <p class="muted"><strong>KB</strong> = <em>knowledge base</em>, the policy + FAQ docs the bot searches (<code>data/knowledge_base.md</code>).</p>
+      <aside class="notes">
+        <p>This is the build-up to the agent. Tell students: this script doesn't change the workflow — it just runs it on cases it can't handle, so we can see the gaps.</p>
+      </aside>
+    </section>
+
+    <!-- 10. Workflow limitations: the table -->
+    <section class="slide">
+      <div class="kicker">Output · 5 sample tickets</div>
+      <h2>Three things the workflow can't do</h2>
       <table>
-        <tr><th>Ticket</th><th>What happens</th><th>Why it's wrong</th></tr>
+        <tr><th>Ticket</th><th>Workflow result</th><th>Why it's not enough</th></tr>
         <tr>
-          <td>"My package never arrived"</td>
-          <td>Drafts a reply asking for order ID.</td>
-          <td class="bad">No way to <em>then</em> call <code>check_order_status</code> when the customer answers.</td>
+          <td><strong>T-002</strong><br><span class="muted">"My package never arrived…"</span></td>
+          <td>Drafts a reply asking for the order ID.</td>
+          <td class="bad">Can't <em>then</em> call <code>check_order_status</code> when the customer answers — the graph is over.</td>
         </tr>
         <tr>
-          <td>"Charged twice + item damaged"</td>
-          <td>Single category. Single retrieval. Half the problem ignored.</td>
-          <td class="bad">Workflow can't handle <em>multi-intent</em>.</td>
+          <td><strong>T-003</strong><br><span class="muted">"Charged twice + damaged"</span></td>
+          <td>Classifies as one category. Drafts a billing reply.</td>
+          <td class="bad">Multi-intent: the damage half is silently dropped.</td>
         </tr>
         <tr>
-          <td>"Gift, late, return window?"</td>
-          <td>Searches the knowledge base once, blindly.</td>
-          <td class="bad">Real answer needs <code>check_refund_policy("gift", X)</code> — the workflow doesn't decide to call it.</td>
+          <td><strong>T-004</strong><br><span class="muted">"Gift, late, return window?"</span></td>
+          <td>Searches the KB once, blindly.</td>
+          <td class="bad">Real answer needs <code>check_refund_policy("gift", days)</code> — the workflow doesn't decide to call it.</td>
         </tr>
       </table>
-      <p class="muted">Run <code>uv run python -m support_bot.main --mode workflow</code> to see all five samples.</p>
+      <p class="muted">The common thread: <strong>the right next step depends on what we just learned</strong>. A fixed pipeline can't react.</p>
       <aside class="notes">
         <p>Use this as a teaching moment: workflows are great until the path depends on what an earlier step found. Then you either keep adding branches (and the code becomes a tangle) or you let the LLM drive.</p>
       </aside>
     </section>
 
-    <!-- 8. What is an agent? -->
+    <!-- 11. What is an agent? -->
     <section class="slide">
       <div class="kicker">Concept</div>
       <h2>What is a <em>true agent</em>?</h2>
@@ -200,7 +250,7 @@ builder.add_edge("safety_check", END)
       </aside>
     </section>
 
-    <!-- 9. Agent loop architecture -->
+    <!-- 12. Agent loop architecture -->
     <section class="slide">
       <h2>Agent loop architecture (our v2)</h2>
       <svg class="diagram" viewBox="0 0 800 280">
@@ -230,34 +280,51 @@ builder.add_edge("safety_check", END)
       </aside>
     </section>
 
-    <!-- 10. Build v2 LangGraph agent -->
+    <!-- 13. Build v2: agent loop -->
     <section class="slide">
-      <h2>Build v2: LangGraph agent</h2>
-<pre><code>def agent_node(state):
-    llm = get_chat_model().bind_tools(ALL_TOOLS)
-    response = llm.invoke(state["messages"])
-    return {"messages": [response],
-            "iterations": state["iterations"] + 1}
-
-def should_continue(state):
-    if state["iterations"] >= MAX_ITER:
-        return "end"             # guardrail
-    if state["messages"][-1].tool_calls:
+      <h2>Build v2: the agent loop</h2>
+      <div class="checkpoint">
+        <span class="checkpoint-label">Checkpoint</span>
+        <code>git checkout step-03-agent-loop</code>
+      </div>
+      <p>The whole agent graph is <strong>~30 lines</strong> in <code>src/support_bot/agent_graph.py</code>. The shape that matters:</p>
+<pre><code>def should_continue(state):
+    if state["iterations"] &gt;= MAX_ITER:    # guardrail
+        return "end"
+    if state["messages"][-1].tool_calls:    # LLM wants a tool
         return "tools"
-    return "end"
-
-builder.add_node("agent", agent_node)
-builder.add_node("tools", ToolNode(ALL_TOOLS))
-builder.add_conditional_edges("agent", should_continue,
-                              {"tools": "tools", "end": END})
-builder.add_edge("tools", "agent")
-</code></pre>
+    return "end"                             # LLM is done</code></pre>
+      <p><strong>Run it on the ticket the workflow couldn't handle:</strong></p>
+<pre class="cmd">uv run python -m support_bot.main --mode agent --ticket T-002</pre>
       <aside class="notes">
-        <p>Walk through the conditional edge — that's the bit that's different from a workflow. The LLM's response decides whether we go to tools or to END.</p>
+        <p>Walk through the conditional edge — that's the only structural difference from a workflow. The LLM's response decides whether we go to tools or to END.</p>
       </aside>
     </section>
 
-    <!-- 11. Tools, observations, stopping -->
+    <!-- 14. Agent output: same problem, smarter -->
+    <section class="slide">
+      <div class="kicker">Output · T-002, agent mode</div>
+      <h2>The agent <em>asks</em> when info is missing</h2>
+<pre class="out">───── Mode: agent  |  LLM: mock ─────
+──── T-002 — missing_information ────
+<span class="hi">Category</span>     delivery_issue
+<span class="hi">Urgency</span>      medium
+<span class="hi">Needs human</span>  False
+<span class="hi">Tools used</span>   <span class="acc">search_knowledge_base</span>
+<span class="hi">Reasoning</span>    Asked for missing order ID; no tools could resolve without it.
+
+╭─ Bot reply ─╮
+│ I'm sorry your package hasn't arrived. To investigate, could
+│ you share the order ID and the email used at checkout? Once
+│ I have those I'll pull the latest tracking and next steps.
+╰─────────────╯</pre>
+      <p class="muted">The agent decided: <em>I don't have enough info → ask the customer</em>. The workflow drafted a generic apology and stopped. Same ticket, different shape of reply.</p>
+      <aside class="notes">
+        <p>Drive home: this isn't about a "smarter" model — the workflow uses the same mock model. It's that the agent's loop lets it look at what tools returned (or what's missing) and choose the next move.</p>
+      </aside>
+    </section>
+
+    <!-- 15. Tools, observations, stopping -->
     <section class="slide">
       <h2>Tools, observations, stopping conditions</h2>
       <div class="cols">
@@ -285,27 +352,50 @@ builder.add_edge("tools", "agent")
       </aside>
     </section>
 
-    <!-- 12. FastAPI -->
+    <!-- 16. FastAPI: turning the bot into a backend service -->
     <section class="slide">
       <h2>Turning the bot into a backend service</h2>
+      <div class="checkpoint">
+        <span class="checkpoint-label">Checkpoint</span>
+        <code>git checkout step-04-fastapi-entrypoint</code>
+      </div>
+      <p>The API is a thin, typed envelope around <code>run_workflow</code> / <code>run_agent</code>:</p>
 <pre><code>@app.post("/agent/tickets", response_model=TicketResponse)
 def agent_tickets(req: TicketRequest) -> TicketResponse:
-    return run_agent(req)
-</code></pre>
-      <p>That's the whole endpoint. The API is a typed envelope around <code>run_agent</code> / <code>run_workflow</code>.</p>
-      <ul>
-        <li><code>GET /health</code> — liveness</li>
-        <li><code>POST /workflow/tickets</code></li>
-        <li><code>POST /agent/tickets</code></li>
-        <li><code>POST /tickets</code> — convenience endpoint, <code>mode</code> in the body</li>
-      </ul>
-      <p class="muted">Try it: <code>uv run uvicorn support_bot.api:app --reload</code> → open <code>/docs</code>.</p>
+    return run_agent(req)</code></pre>
+      <p>Four endpoints: <code>GET /health</code>, <code>POST /workflow/tickets</code>, <code>POST /agent/tickets</code>, <code>POST /tickets</code> (mode in body).</p>
+<pre class="cmd">uv run uvicorn support_bot.api:app --reload</pre>
+      <p class="muted">Then open <a href="http://localhost:8000/docs" target="_blank" rel="noopener">localhost:8000/docs</a> for an auto-generated Swagger UI.</p>
       <aside class="notes">
         <p>The point: an "AI agent" in production is just a backend service. Same Pydantic models, same logging, same tests, same FastAPI patterns you'd use for anything else.</p>
       </aside>
     </section>
 
-    <!-- 13. Production concerns -->
+    <!-- 17. API in action -->
+    <section class="slide">
+      <div class="kicker">Demo · agent endpoint</div>
+      <h2>Same agent, now over HTTP</h2>
+<pre class="cmd">curl -X POST http://localhost:8000/agent/tickets \
+  -H 'content-type: application/json' \
+  -d '{"message":"My headphones arrived broken. Refund please. Order ORD-1007","order_id":"ORD-1007"}'</pre>
+<pre class="out">{
+  "category": "<span class="acc">refund_request</span>",
+  "urgency": "medium",
+  "customer_response": "Thanks for letting us know. Damaged-on-arrival
+    items are eligible for return regardless of category. A teammate
+    will confirm the refund and email you a prepaid return label.",
+  "needs_human": <span class="good">true</span>,
+  "tools_used": [<span class="acc">"check_order_status", "check_refund_policy"</span>],
+  "reasoning_summary": "Damaged item: eligible per policy, refund
+    needs human approval."
+}</pre>
+      <p class="muted">Two tools called dynamically · structured Pydantic response · <code>needs_human=true</code> because we never auto-approve refunds.</p>
+      <aside class="notes">
+        <p>Point at <code>tools_used</code> — that list isn't hard-coded anywhere; it's whatever the agent chose to call. Same shape every time, so downstream systems can rely on it.</p>
+      </aside>
+    </section>
+
+    <!-- 18. Production concerns -->
     <section class="slide">
       <h2>Production concerns</h2>
       <table>
@@ -324,7 +414,34 @@ def agent_tickets(req: TicketRequest) -> TicketResponse:
       </aside>
     </section>
 
-    <!-- 14. Workflow vs Agent comparison -->
+    <!-- 19. Evals: workflow vs agent side by side -->
+    <section class="slide">
+      <h2>Evals: same tickets, both versions</h2>
+      <div class="checkpoint">
+        <span class="checkpoint-label">Checkpoint</span>
+        <code>git checkout step-05-production-guardrails</code>
+      </div>
+      <p>The eval harness runs all 5 sample tickets through <strong>both</strong> the workflow and the agent, then prints a comparison.</p>
+<pre class="cmd">uv run python -m support_bot.evals
+uv run pytest                # 22 passing, all in mock mode</pre>
+<pre class="out">                    Workflow vs Agent  |  LLM=mock
+┏━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ID    ┃ Label     ┃ W cat   ┃ W esc       ┃ A esc  · A tools     ┃
+┡━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━┩
+│ T-001 │ happy_…   │ <span class="good">✓</span>       │ <span class="bad">✗</span> False     │ <span class="good">✓</span> True · check_order │
+│ T-002 │ missing…  │ <span class="good">✓</span>       │ <span class="bad">✗</span> True      │ <span class="good">✓</span> False (asks)       │
+│ T-003 │ multi_…   │ <span class="good">✓</span>       │ <span class="good">✓</span> True      │ <span class="good">✓</span> True · escalate    │
+│ T-004 │ policy…   │ <span class="bad">✗</span>       │ <span class="good">✓</span> False     │ <span class="good">✓</span> False · refund_pol │
+│ T-005 │ high_r…   │ <span class="good">✓</span>       │ <span class="good">✓</span> True      │ <span class="good">✓</span> True · escalate    │
+└───────┴───────────┴─────────┴─────────────┴──────────────────────┘</pre>
+      <p class="muted"><strong>The takeaway:</strong> the agent gets escalation right on every ticket; the workflow misses 2/5. The tradeoff: the agent calls the LLM ~3× more often.</p>
+      <aside class="notes">
+        <p>This is the punchline of the workshop. The eval table makes the win concrete — not "the agent is smarter," but specifically "on these 5 inputs, the workflow gets escalation wrong on T-001 and T-002, the agent gets all of them."</p>
+        <p>22 tests across tools, workflow, agent, and API. All run in mock mode, so CI never needs an API key.</p>
+      </aside>
+    </section>
+
+    <!-- 20. Workflow vs Agent comparison -->
     <section class="slide">
       <h2>Workflow vs Agent — when to pick which?</h2>
       <table>
@@ -340,26 +457,11 @@ def agent_tickets(req: TicketRequest) -> TicketResponse:
         <strong>Start simple. Add agentic complexity only when justified.</strong>
       </p>
       <aside class="notes">
-        <p>This is the takeaway slide. Read the bottom line. Many real systems are a workflow with one agentic step inside it, not a full agent.</p>
+        <p>This is the verdict slide. Read the bottom line. Many real systems are a workflow with one agentic step inside it, not a full agent.</p>
       </aside>
     </section>
 
-    <!-- 15. Final demo -->
-    <section class="slide">
-      <h2>Final demo</h2>
-      <ol>
-        <li><code>uv run uvicorn support_bot.api:app --reload</code></li>
-        <li>Hit <code>POST /workflow/tickets</code> with the 5 sample tickets.</li>
-        <li>Hit <code>POST /agent/tickets</code> with the same tickets.</li>
-        <li>Run <code>uv run python -m support_bot.evals</code> to see the comparison.</li>
-        <li>Run <code>uv run pytest</code> — all green in mock mode.</li>
-      </ol>
-      <aside class="notes">
-        <p>Have these commands ready in a separate terminal. The eval table is the punchline — it shows the agent handling multi-intent / missing-info better than the workflow.</p>
-      </aside>
-    </section>
-
-    <!-- 16. Takeaways -->
+    <!-- 21. Takeaways -->
     <section class="slide">
       <h2>Takeaways</h2>
       <ul>

@@ -415,6 +415,73 @@ button.navbtn:active { transform: translateY(1px); }
   color: var(--fg-muted);
 }
 
+/* ─── Checkpoint / step badge ────────────────────────────────────────── */
+
+.checkpoint {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin: 14px 0 18px;
+  font-size: 0.95em;
+}
+.checkpoint-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.checkpoint code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 1em;
+  color: var(--fg);
+}
+
+/* ─── Terminal-style command + output blocks ─────────────────────────── */
+
+pre.cmd, pre.out {
+  margin: 8px 0;
+  padding: 14px 18px;
+  font-size: 0.78em;
+  line-height: 1.55;
+}
+pre.cmd {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+pre.cmd::before {
+  content: "$";
+  color: var(--accent);
+  margin-right: 8px;
+  font-weight: 600;
+}
+pre.out {
+  background: var(--bg);
+  color: var(--fg-muted);
+  font-size: 0.74em;
+}
+pre.out .hi { color: var(--fg); font-weight: 500; }
+pre.out .acc { color: var(--accent); }
+pre.out .good { color: var(--good); }
+pre.out .bad { color: var(--bad); }
+
+/* Two-column "walkthrough" layout */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 22px;
+  align-items: start;
+}
+.split > .col h3 { margin-top: 0; color: var(--fg); font-size: 1em; }
+
 /* ─── Title slide variant ────────────────────────────────────────────── */
 
 section.slide.title h1 { font-size: 3.4em; margin-bottom: 0.15em; letter-spacing: -0.035em; }
