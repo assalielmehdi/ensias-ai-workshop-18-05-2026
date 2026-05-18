@@ -117,6 +117,8 @@ uv run ty check src      # type-check
 
 All three are green on `main` — `pytest && ruff check && ty check src` is the full pre-commit sequence.
 
+**Style note for students:** we deliberately keep `Optional[str]` instead of the newer `str | None`, and `from typing import ...` instead of `from collections.abc import ...` where it doesn't change behaviour. Both forms work; the longer ones are easier to read at first glance and search the docs for. Ruff's `UP007` / `UP045` rules (which would rewrite to the new syntax) are intentionally disabled — see the comments in `pyproject.toml`.
+
 ## Workshop slides
 
 Open [`slides/index.html`](slides/index.html) in any browser. Arrow keys to navigate, press `n` to toggle speaker notes.

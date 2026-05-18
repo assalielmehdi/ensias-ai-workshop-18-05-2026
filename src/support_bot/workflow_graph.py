@@ -21,7 +21,7 @@ from typing import Optional, TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
-from .llm import _as_text, get_chat_model
+from .llm import as_text, get_chat_model
 from .models import TicketCategory, TicketRequest, TicketResponse, Urgency
 from .prompts import CLASSIFIER_PROMPT, DRAFTER_PROMPT, SAFETY_PROMPT
 from .tools import check_order_status, search_knowledge_base
@@ -51,7 +51,7 @@ def classify_ticket(state: WorkflowState) -> WorkflowState:
     req = state["request"]
     llm = get_chat_model()
     resp = llm.invoke([SystemMessage(content=CLASSIFIER_PROMPT), HumanMessage(content=req.message)])
-    parsed = _safe_json(_as_text(resp.content)) or {}
+    parsed = _safe_json(as_text(resp.content)) or {}
     category = TicketCategory(parsed.get("category", "general_question"))
     urgency = Urgency(parsed.get("urgency", "low"))
     logger.info("classify category=%s urgency=%s", category.value, urgency.value)
@@ -109,7 +109,7 @@ def draft_response(state: WorkflowState) -> WorkflowState:
         f"Write the reply now."
     )
     resp = llm.invoke([SystemMessage(content=DRAFTER_PROMPT), HumanMessage(content=human)])
-    draft = _as_text(resp.content).strip()
+    draft = as_text(resp.content).strip()
     return {"draft": draft}
 
 
@@ -121,7 +121,7 @@ def safety_check(state: WorkflowState) -> WorkflowState:
     llm = get_chat_model()
     human = f"Customer message:\n{req.message}\n\nDraft reply:\n{draft}\n\nDecide now."
     resp = llm.invoke([SystemMessage(content=SAFETY_PROMPT), HumanMessage(content=human)])
-    parsed = _safe_json(_as_text(resp.content)) or {"needs_human": False, "reason": ""}
+    parsed = _safe_json(as_text(resp.content)) or {"needs_human": False, "reason": ""}
     needs_human = bool(parsed.get("needs_human", False))
 
     # If a human is needed, swap the draft for a safe boilerplate.

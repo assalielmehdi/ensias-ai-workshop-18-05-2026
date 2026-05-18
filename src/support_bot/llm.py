@@ -27,7 +27,7 @@ from pydantic import Field, SecretStr
 from .config import settings
 
 
-def _as_text(content: object) -> str:
+def as_text(content: object) -> str:
     """Coerce a LangChain message `content` (str | list[...] | None) to str.
 
     LangChain types `BaseMessage.content` as a union to support multi-modal
@@ -99,8 +99,8 @@ class MockChatModel(BaseChatModel):
     ) -> ChatResult:
         system = next((m for m in messages if isinstance(m, SystemMessage)), None)
         last_human = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
-        system_text = _as_text(system.content) if system else ""
-        human_text = _as_text(last_human.content) if last_human else ""
+        system_text = as_text(system.content) if system else ""
+        human_text = as_text(last_human.content) if last_human else ""
 
         reply = self._route(system_text, human_text, messages)
         return ChatResult(generations=[ChatGeneration(message=reply)])
@@ -146,7 +146,7 @@ class MockChatModel(BaseChatModel):
         used: list[str] = [
             m.name for m in history if isinstance(m, ToolMessage) and m.name is not None
         ]
-        original_text = _as_text(original.content) if original else human
+        original_text = as_text(original.content) if original else human
         text = original_text.lower()
 
         # Step 1: legal/threat → escalate immediately.

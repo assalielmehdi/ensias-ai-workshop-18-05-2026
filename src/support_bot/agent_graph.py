@@ -24,7 +24,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from .config import settings
-from .llm import _as_text, get_chat_model
+from .llm import as_text, get_chat_model
 from .models import TicketCategory, TicketRequest, TicketResponse, Urgency
 from .prompts import AGENT_SYSTEM_PROMPT
 from .tools import ALL_TOOLS
@@ -109,7 +109,7 @@ def run_agent(req: TicketRequest) -> TicketResponse:
 
     tools_used = _collect_tool_names(final["messages"])
     last_ai = next((m for m in reversed(final["messages"]) if isinstance(m, AIMessage)), None)
-    parsed = _parse_final(_as_text(last_ai.content) if last_ai else "")
+    parsed = _parse_final(as_text(last_ai.content) if last_ai else "")
 
     # Guardrail: if the model never produced a structured answer (e.g. we hit
     # the iteration cap), fall back to a safe human-escalation reply.
